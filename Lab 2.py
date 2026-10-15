@@ -174,6 +174,10 @@ for column in bounded_features:
     print(column, ":", outside)
 
 
+# Comment: the musical features of all the rows are inside range. Some other features, like tempo
+# or key, follow their own score systems, so they have not been included in this filter.
+
+
 
 # Representation
 # -------------------------
@@ -234,3 +238,24 @@ for ax, column, label in zip(
 
 plt.tight_layout()
 plt.show()
+
+
+# Comment: After cleaning the data taking out repeated observations for the same song and
+# rows without popularity score, 600 unique tracks remain.
+# The medium class contains the larger amount of tracks. At the same time, all three classes
+# are reasonably represented.
+
+# The numerical analysis suggests that "loudness" and "energy" tend to have positive relationships
+# with popularity while "acousticness" has a negative relationship, however these relationships are
+# not strong enough to guarantee 100% accurate predictions.
+
+# Artists/Songs/Albums titles and names will not be used as input features since they could mistrack
+# the models into memorizing identities instead of focusing on relationships among features.
+
+
+
+
+
+
+
+# 3.- CREATE TRAINING AND TEST DATA
