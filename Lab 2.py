@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import GridSearchCV
@@ -15,6 +16,7 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import ConfusionMatrixDisplay
 from IPython.display import display
+from sklearn.tree import DecisionTreeClassifier
 
 
 # Comment: The objective of this lab is comparing classification models that predict the popularity
@@ -259,3 +261,139 @@ plt.show()
 
 
 # 3.- CREATE TRAINING AND TEST DATA
+# ---------------------------------------------------------------
+
+
+# input features from before
+x = data[features].copy()
+
+# classification target
+y = data["popularity_class"].copy()
+
+# split data
+x_train, x_test, y_train, y_test = train_test_split(
+    x,
+    y,
+    test_size = 0.20,   #as in lab 1, 20% for the test, 80% for training
+    random_state = 42,
+    stratify = y
+)
+
+
+print("\n\n\n3.- CREATE TRAINING AND TEST DATA")
+print ("-"*30)
+print (f"\n\nTraining set shape: {x_train.shape}")
+print (f"\n\nTest set shape: {x_test.shape}\n\n\n")
+
+
+
+
+# 4.- BUILDING THE CLASIFICATION MODELS
+# ---------------------------------------------------------------
+
+# Comment: The two classification algorithms used will be:
+#   - Logistic Regression: will require StandardScaler implemented within a pipeline
+#       due to numerical variables having different scales.
+#   - Decision Tree: can represent nonlinear relationships and doesn't require
+#       feature scaling.
+
+#   The same training data will be used for both models.7
+
+print ("4.- BUILDING THE CLASIFICATION MODELS")
+print ("-"*30)
+print("\n\n")
+
+
+models = {
+    "Logistic Regression": Pipeline([
+        ("scaler", StandardScaler()),
+        ("model", LogisticRegression(max_iter = 2000))
+    ]),
+
+    "Decision Tree": Pipeline([
+        ("model", DecisionTreeClassifier(random_state = 42))
+    ])
+}
+
+# stratified five fold validation
+cv = StratifiedKFold(
+    n_splits = 5,
+    shuffle = True,
+    random_state = 42
+)
+
+
+# initial cross validation score for each model
+baseline_cv_scores = {}
+
+for model_name, model in models.items():
+
+    scores = cross_val_score(   #trains model with different sets
+        model,
+        x_train,
+        y_train,
+        cv = cv,
+        scoring = "f1_macro"
+    )
+
+    baseline_cv_scores[model_name] = scores.mean()
+
+    print (f"\nModel: {model_name}\n")
+    print (f"Scores for the five folds: {scores.round(3)}\n")
+    print (f"Mean F1-macro: {round(scores.mean(), 3)}\n\n")
+
+
+# hyperparameters
+
+param_grids = {
+    "Logistic Regression": {
+        "model__C": [0.1, 1.0, 10.0]
+    },
+
+    "Decision Tree": {
+        "model__max_depth": [3, 5, 10, None],
+        "model__min_samples_leaf": [1, 5, 10]
+    }
+}
+
+# best models and cross validation scores
+best_models = {}
+tuned_cv_scores = {}
+best_parameters = {}
+
+
+
+
+# 5.- TUNING THE MODELS
+# ---------------------------------------------------------------
+
+
+
+# tuning the models using the training data
+for model_name, model in models.items():
+
+    grid_search = GridSearchCV(
+        estimator = model,
+        param_grid = param_grids[model_name],
+        cv = cv,
+        scoring = "f1_macro",
+        refit = True    #once best config is chosen(cv) the model trains again with all the traning set
+    )
+
+    grid_search.fit(x_train, y_train)
+
+    # best version of each model
+    best_models[model_name] = grid_search.best_estimator_
+
+    # best cross validation score
+    tuned_cv_scores[model_name] = grid_search.best_score_
+
+    # best hyperparameters
+    best_parameters[model_name] = grid_search.best_params_
+
+    print("\nModel:", model_name)
+    print("Best parameters:", grid_search.best_params_)
+    print("Best cross-validation F1-macro:",
+          round(grid_search.best_score_, 3))
+
+
