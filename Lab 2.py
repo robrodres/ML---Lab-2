@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.model_selection import cross_val_score
@@ -292,8 +292,9 @@ print (f"\n\nTest set shape: {x_test.shape}\n\n\n")
 # ---------------------------------------------------------------
 
 # Comment: The two classification algorithms used will be:
-#   - Logistic Regression: will require StandardScaler implemented within a pipeline
-#       due to numerical variables having different scales.
+#   - K-Nearest Neighbors/KNN: classifies a track by looking at adjacent tracks
+#       in the training data. Feature scaling is necessary because the numerical
+#       variables have different scales.
 #   - Decision Tree: can represent nonlinear relationships and doesn't require
 #       feature scaling.
 
@@ -305,9 +306,9 @@ print("\n\n")
 
 
 models = {
-    "Logistic Regression": Pipeline([
+    "K-Nearest Neighbors": Pipeline([
         ("scaler", StandardScaler()),
-        ("model", LogisticRegression(max_iter = 2000))
+        ("model", KNeighborsClassifier())
     ]),
 
     "Decision Tree": Pipeline([
@@ -333,7 +334,7 @@ for model_name, model in models.items():
         x_train,
         y_train,
         cv = cv,
-        scoring = "f1_macro"
+        scoring = "accuracy"
     )
 
     baseline_cv_scores[model_name] = scores.mean()
@@ -346,13 +347,13 @@ for model_name, model in models.items():
 # hyperparameters
 
 param_grids = {
-    "Logistic Regression": {
-        "model__C": [0.1, 1.0, 10.0]
+     "K-Nearest Neighbors": {
+        "model__n_neighbors": [3, 5, 7, 9, 11]  # number of neighbor tracks used for classification
     },
 
     "Decision Tree": {
-        "model__max_depth": [3, 5, 10, None],
-        "model__min_samples_leaf": [1, 5, 10]
+        "model__max_depth": [3, 5, 10, None],   # limits depth
+        "model__min_samples_leaf": [1, 5, 10]   # set leaves
     }
 }
 
@@ -364,7 +365,7 @@ best_parameters = {}
 
 
 
-# 5.- TUNING THE MODELS
+# 5.- TUNING THE MODELS (before comparison)
 # ---------------------------------------------------------------
 
 
@@ -376,7 +377,7 @@ for model_name, model in models.items():
         estimator = model,
         param_grid = param_grids[model_name],
         cv = cv,
-        scoring = "f1_macro",
+        scoring = "accuracy",
         refit = True    #once best config is chosen(cv) the model trains again with all the traning set
     )
 
@@ -393,7 +394,135 @@ for model_name, model in models.items():
 
     print("\nModel:", model_name)
     print("Best parameters:", grid_search.best_params_)
-    print("Best cross-validation F1-macro:",
+    print("Best cross-validation accuracy:",
           round(grid_search.best_score_, 3))
+    print("\n\n")
 
 
+
+
+
+# 6.- COMPARISON AND EVALUATION
+# ---------------------------------------------------------------
+
+comparison = pd.DataFrame ({
+    "Model": list (models.keys()),
+    "Baseline CV Accuracy": [
+        baseline_cv_scores[name]
+        for name in models
+    ],
+    "Tuned CV Accuracy": [
+        tuned_cv_scores[name]
+        for name in models
+    ]
+})
+
+comparison["Improvement"] = (
+    comparison["Tuned CV Accuracy"] - comparison["Baseline CV Accuracy"])
+
+display (comparison.round(3))
+
+print ("\n\n")
+
+
+# final results
+final_metrics = []
+
+for model_name, model in best_models.items():
+
+
+    y_pred = model.predict(x_test)
+
+    accuracy = accuracy_score(y_test, y_pred)
+
+
+    precision = precision_score(
+        y_test,
+        y_pred,
+        average = "weighted",
+        zero_division = 0
+    )
+
+    recall = recall_score(
+        y_test,
+        y_pred,
+        average = "weighted",
+        zero_division = 0
+    )
+
+    f1 = f1_score(
+        y_test,
+        y_pred,
+        average = "weighted",
+        zero_division = 0
+    )
+
+    final_metrics.append({
+        "Model": model_name,
+        "Accuracy": accuracy,
+        "Precision": precision,
+        "Recall": recall,
+        "F1-score": f1
+    })
+
+#display
+final_results = pd.DataFrame(final_metrics).set_index("Model")
+
+display(final_results.round(3))
+
+print("\n\n")
+
+# condufsion matrix
+for model_name, model in best_models.items():
+
+    y_pred = model.predict(x_test)
+
+    cm = confusion_matrix(y_test, y_pred, labels = class_names
+    )
+
+    print(f"Confusion Matrix - {model_name}")
+
+    display (pd.DataFrame(cm,
+                          index = class_names,
+                          columns = class_names))
+
+    # visual
+    display_matrix = ConfusionMatrixDisplay(confusion_matrix = cm,
+                                            display_labels = class_names)
+
+    display_matrix.plot(values_format = "d")
+
+    plt.title(f"Confusion Matrix - {model_name}")
+    plt.show()
+
+
+
+
+# 7.- CONCLUSSION
+# ---------------------------------------------------------------
+#
+# Comment: In this lab, K-Nearest Neighbors (KNN) and Decision Tree (DT) were used to classify music tracks
+#   into three popularity classes: Low, Medium, High.
+#   Both models were evaluated using 5-fold cross-validation and tuned using different hyperparameters.
+#
+#   Before tuning, KNN achieved a CV accuracy of 37,9%, which increased slightly to 38,1% after tuning.
+#   DT improved from 34,3% to 41%. Therefore, DT achieved the highest CV acc. after tuning   
+#
+#   However the final results were different: KNN achieved an acc. of 39,2% while DT achieved 32,5%.
+#   KNN also achieved highest weighetd Precision, Recall and F1 score than DT:
+#   
+#   Model       Precision   Recall  F1-score
+#   KNN         39,4%       39,2%   39,3%
+#   DT          32,8%       32,5%   32,5%  
+#
+#
+#   The confusion matrices show that KNN classified the Medium class most correctly, succesfully identifying
+#   25 out of 52 tracks. For the Low class, both models correctly classified 11 out of 29. For the High class,
+#   both correctly classified as well 11 out of 39.
+#   On the other hand, both models present difficulties when identifying high popular songs, where KNN incorrectly
+#   classified 18 High tracks as Medium and the DT made the same mistake with 20 tracks.
+#
+#   Neither model provides a strong result nor improvement for this dataset, but KNN suits it better due to the 
+#   better results, eventhough the performance is still limited.
+#   Overall, the results suggest that the provided musical features in the dataset would not be enough
+#   data to feed a reliable popularity prediction.
