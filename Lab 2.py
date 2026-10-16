@@ -1,9 +1,7 @@
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import StratifiedKFold, train_test_split
-from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
@@ -12,7 +10,6 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
-from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import ConfusionMatrixDisplay
 from IPython.display import display
@@ -22,6 +19,17 @@ from sklearn.tree import DecisionTreeClassifier
 # Comment: The objective of this lab is comparing classification models that predict the popularity
 # class of a song using its musical characteristics.
 # The target variable will have three classes: Low, Medium and High.
+
+
+# CONTENTS:
+#                                               LINE
+# 1.- EXPLORING THE DATASET .................... 35
+# 2.- DATA PREPARATION.......................... 66
+# 3.- CREATE TRAINING AND TEST DATA.............271
+# 4.- BUILDING THE CLASIFICATION MODELS.........299
+# 5.- TUNING THE MODELS (before comparison).....376
+# 6.- COMPARISON AND EVALUATION.................413
+# 7.- CONCLUSSION...............................509
 
 
 # 1.- EXPLORING THE DATASET
