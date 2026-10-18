@@ -349,7 +349,7 @@ for model_name, model in models.items():
 
     print (f"\nModel: {model_name}\n")
     print (f"Scores for the five folds: {scores.round(3)}\n")
-    print (f"Mean F1-macro: {round(scores.mean(), 3)}\n\n")
+    print (f"Mean accuracy: {round(scores.mean(), 3)}\n\n")
 
 
 # hyperparameters
